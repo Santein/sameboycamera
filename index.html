@@ -230,6 +230,13 @@
       margin-top: 10px;
     }
 
+    .site-stats {
+      text-align: center;
+      margin-top: 20px;
+      color: var(--primary);
+      font-weight: bold;
+    }
+
     @media (max-width: 600px) {
       .container {
         padding: 10px;
@@ -332,6 +339,11 @@
     <canvas id="canvas"></canvas>
   </div>
 
+  <div class="site-stats">
+    <p>Visitors: <span id="visitorCount">0</span></p>
+    <p>Photos Processed: <span id="processCount">0</span></p>
+  </div>
+
   <footer>
     <p>Made with ♥ <a href="https://linktr.ee/santo.gaglione" class="santein-link" target="_blank">by Santein</a> </p>
   </footer>
@@ -358,6 +370,8 @@
     const ctx = canvas.getContext('2d');
     const processingIndicator = document.getElementById('processingIndicator');
     const processedIndicator = document.getElementById('processedIndicator');
+    const visitorCountSpan = document.getElementById('visitorCount');
+    const processCountSpan = document.getElementById('processCount');
 
     // Default Game Boy palette (4 shades of green)
     let colorPalette = [
@@ -371,6 +385,21 @@
     let originalImageData = null;
     let processedImageData = null;
     let isProcessing = false;
+
+    // Visitor and Process Count Management
+    function incrementVisitorCount() {
+      let visitorCount = parseInt(localStorage.getItem('visitorCount') || '0');
+      visitorCount++;
+      localStorage.setItem('visitorCount', visitorCount.toString());
+      visitorCountSpan.textContent = visitorCount;
+    }
+
+    function incrementProcessCount() {
+      let processCount = parseInt(localStorage.getItem('processCount') || '0');
+      processCount++;
+      localStorage.setItem('processCount', processCount.toString());
+      processCountSpan.textContent = processCount;
+    }
 
     // Event listeners
     uploadArea.addEventListener('click', () => fileInput.click());
@@ -406,7 +435,20 @@
       }
     });
 
-    // Function to handle file selection
+    // Initialize counters on page load
+    window.addEventListener('load', () => {
+      const visitorCount = parseInt(localStorage.getItem('visitorCount') || '0');
+      const processCount = parseInt(localStorage.getItem('processCount') || '0');
+      
+      visitorCountSpan.textContent = visitorCount;
+      processCountSpan.textContent = processCount;
+
+      // Increment visitor count on each page load
+      incrementVisitorCount();
+    });
+
+    // Rest of the existing script remains the same...
+    // [All previous functions like handleFileSelect, processImage, etc. remain unchanged]
     function handleFileSelect() {
       const file = fileInput.files[0];
       if (file && file.type.match('image.*')) {
@@ -441,99 +483,6 @@
       }
     }
 
-    // Function to parse HEX file and extract color palette
-    function handlePaletteFileSelect() {
-      const file = colorPaletteFile.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          try {
-            // Parse the .hex file content to extract color codes
-            const content = e.target.result;
-            const hexColors = parseHexFile(content);
-            
-            if (hexColors.length > 0) {
-              // Convert hex colors to RGB
-              colorPalette = hexColors.map(hex => {
-                const r = parseInt(hex.substr(0, 2), 16);
-                const g = parseInt(hex.substr(2, 2), 16);
-                const b = parseInt(hex.substr(4, 2), 16);
-                return [r, g, b];
-              });
-              
-              // Update palette preview
-              updatePalettePreview();
-            }
-          } catch (error) {
-            console.error('Error parsing HEX file:', error);
-            alert('Invalid HEX file format. Please try another file.');
-          }
-        };
-        reader.readAsText(file);
-      }
-    }
-
-    // Function to parse HEX file content
-    function parseHexFile(content) {
-      const hexColors = [];
-      
-      // Look for 6-digit hex color codes (RRGGBB)
-      const regex = /([0-9A-Fa-f]{6})/g;
-      let match;
-      
-      while ((match = regex.exec(content)) !== null) {
-        hexColors.push(match[1]);
-      }
-      
-      // If no colors found, use some backup method
-      if (hexColors.length === 0) {
-        const bytes = [];
-        for (let i = 0; i < content.length; i++) {
-          const byte = content.charCodeAt(i).toString(16).padStart(2, '0');
-          bytes.push(byte);
-        }
-        
-        // Group bytes into 3-byte RGB values
-        for (let i = 0; i < bytes.length - 2; i += 3) {
-          hexColors.push(bytes[i] + bytes[i+1] + bytes[i+2]);
-        }
-      }
-      
-      // Limit to 4 colors for Game Boy style
-      return hexColors.slice(0, 4);
-    }
-
-    // Function to update the palette preview
-    function updatePalettePreview() {
-      palettePreview.innerHTML = '';
-      
-      colorPalette.forEach(color => {
-        const colorBox = document.createElement('div');
-        colorBox.style.backgroundColor = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
-        colorBox.style.flexGrow = 1;
-        colorBox.style.height = '100%';
-        colorBox.style.border = '1px solid var(--border)';
-        palettePreview.appendChild(colorBox);
-      });
-    }
-
-    // Update the preview with default palette
-    updatePalettePreview();
-
-    // Function to update slider value displays
-    function updatePixelationValue() {
-      pixelationValue.textContent = pixelationSlider.value;
-    }
-
-    function updateThresholdValue() {
-      thresholdValue.textContent = thresholdSlider.value;
-    }
-
-    function updateDitherValue() {
-      ditherValue.textContent = ditherSlider.value;
-    }
-
-    // Function to process the image with Game Boy Camera effect
     function processImage() {
       if (!originalImageData || isProcessing) return;
       
@@ -582,6 +531,9 @@
         downloadButton.disabled = false;
         processedIndicator.classList.remove('hidden');
         
+        // Increment process count
+        incrementProcessCount();
+        
         // Reset processing state
         isProcessing = false;
         processingIndicator.style.display = 'none';
@@ -595,8 +547,110 @@
       }, 0);
     }
 
-    // Function to pixelate image
+    // Remaining functions (handlePaletteFileSelect, pixelate, applyGameBoyEffect, etc.) 
+    // remain exactly the same as in the original script
+
+    // Rest of the original script remains unchanged...
+    function handlePaletteFileSelect() {
+      const file = colorPaletteFile.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            // Parse the .hex file content to extract color codes
+            const content = e.target.result;
+            const hexColors = parseHexFile(content);
+            
+            if (hexColors.length > 0) {
+              // Convert hex colors to RGB
+              colorPalette = hexColors.map(hex => {
+                const r = parseInt(hex.substr(0, 2), 16);
+                const g = parseInt(hex.substr(2, 2), 16);
+                const b = parseInt(hex.substr(4, 2), 16);
+                return [r, g, b];
+              });
+              
+              // Update palette preview
+              updatePalettePreview();
+            }
+          } catch (error) {
+            console.error('Error parsing HEX file:', error);
+            alert('Invalid HEX file format. Please try another file.');
+          }
+        };
+        reader.readAsText(file);
+      }
+    }
+
+    function parseHexFile(content) {
+      const hexColors = [];
+      
+      // Look for 6-digit hex color codes (RRGGBB)
+      const regex = /([0-9A-Fa-f]{6})/g;
+      let match;
+      
+      while ((match = regex.exec(content)) !== null) {
+        hexColors.push(match[1]);
+      }
+      
+      // If no colors found, use some backup method
+      if (hexColors.length === 0) {
+        const bytes = [];
+        for (let i = 0; i < content.length; i++) {
+          const byte = content.charCodeAt(i).toString(16).padStart(2, '0');
+          bytes.push(byte);
+        }
+        
+        // Group bytes into 3-byte RGB values
+        for (let i = 0; i < bytes.length - 2; i += 3) {
+          hexColors.push(bytes[i] + bytes[i+1] + bytes[i+2]);
+        }
+      }
+      
+      // Limit to 4 colors for Game Boy style
+      return hexColors.slice(0, 4);
+    }
+
+    function updatePalettePreview() {
+      palettePreview.innerHTML = '';
+      
+      colorPalette.forEach(color => {
+        const colorBox = document.createElement('div');
+        colorBox.style.backgroundColor = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+        colorBox.style.flexGrow = 1;
+        colorBox.style.height = '100%';
+        colorBox.style.border = '1px solid var(--border)';
+        palettePreview.appendChild(colorBox);
+      });
+    }
+
+    // Update the preview with default palette
+    updatePalettePreview();
+
+    function updatePixelationValue() {
+      pixelationValue.textContent = pixelationSlider.value;
+    }
+
+    function updateThresholdValue() {
+      thresholdValue.textContent = thresholdSlider.value;
+    }
+
+    function updateDitherValue() {
+      ditherValue.textContent = ditherSlider.value;
+    }
+
+    function downloadImage() {
+      if (!processedImage.src) return;
+      
+      const link = document.createElement('a');
+      link.download = 'gameboy_camera_filter.png';
+      link.href = processedImage.src;
+      link.click();
+    }
+
+    // Complex image processing functions remain the same
     function pixelate(imageData, pixelSize) {
+      // Existing pixelate implementation
       const { width, height, data } = imageData;
       
       // Create a temporary canvas to work with
@@ -638,8 +692,8 @@
       }
     }
 
-    // Function to apply Game Boy Camera effect
     function applyGameBoyEffect(imageData, threshold, ditherAmount, palette) {
+      // Existing Game Boy effect implementation
       const { width, height, data } = imageData;
       
       // Create error diffusion arrays for dithering
@@ -677,7 +731,6 @@
       }
     }
 
-    // Function to find the closest color in the palette
     function findClosestColor(r, g, b, palette) {
       let minDistance = Infinity;
       let closestColor = palette[0];
@@ -700,7 +753,6 @@
       return closestColor;
     }
 
-    // Function to distribute the quantization error
     function distributeError(errorR, errorG, errorB, errR, errG, errB, x, y, width, height, amount) {
       // Floyd-Steinberg dithering weights
       // [ * 7]
@@ -724,16 +776,6 @@
           errorB[idx] += errB * weight * amount;
         }
       }
-    }
-
-    // Function to download the processed image
-    function downloadImage() {
-      if (!processedImage.src) return;
-      
-      const link = document.createElement('a');
-      link.download = 'gameboy_camera_filter.png';
-      link.href = processedImage.src;
-      link.click();
     }
   </script>
 </body>
